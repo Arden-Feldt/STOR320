@@ -1,0 +1,70 @@
+---
+title: "R Notebook"
+output:
+  pdf_document: default
+  html_document:
+    df_print: paged
+---
+
+# Setting the directory and reading in csv's
+## Change the working directory to your own path using the function setwd()
+
+```{r}
+setwd("C:\\Users\\ethan\\OneDrive\\Desktop\\STOR320\\Final Project")
+
+housing <- read.csv("Public_Housing_Developments.csv")
+states <- read.csv("states.txt", header = TRUE)
+
+```
+
+# See Housing
+## Columns already looked at: TMinorit, TPoverty, TPCT_OWNSDF (own single family housing)
+
+```{r}
+head(housing)
+```
+
+# See states
+
+```{r}
+head(states, 12)
+```
+
+# Making States Usable:
+
+```{r}
+# Give states census alphabet numbers
+states_final <- states %>%
+  mutate(id = row_number()) %>%
+  # Remove useless column
+  select(-5) %>%
+  # Make names pretty
+  rename(`Republican_Percent` = `Republicanlean.Rep.`, `Moderate_Percent`=`No.lean`, `Democrat_Percent` = `Democratlean.Dem.`) %>%
+  # Replace '%' signs
+  mutate_at(vars(Republican_Percent, Moderate_Percent, Democrat_Percent), ~ gsub("%", "", .)) %>%
+  # Make all numeric
+  mutate_at(vars(Republican_Percent, Moderate_Percent, Democrat_Percent), as.numeric) %>%
+  # Accuratly make percents
+  mutate_at(vars(Republican_Percent, Moderate_Percent, Democrat_Percent), ~ ./100)
+
+states_final
+```
+
+# MERGIN TIME
+
+```{r}
+finalDF <- merge(housing, state2, by.x = "STATE2KX", by.y = "id", all = TRUE, na.rm=FALSE)
+```
+
+# And it worked
+
+```{r}
+head(finalDF)
+```
+
+# Run this code if you wanna download it
+
+```{r}
+write.csv(finalDF, file = "finalDF.csv", row.names = FALSE)
+```
+
