@@ -1,0 +1,86 @@
+---
+title: "Public Housing"
+output: html_document
+date: "2024-03-05"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Read in CSV
+
+```{r}
+setwd("C:\\Users\\ethan\\OneDrive\\Desktop\\STOR320\\Final Project")
+
+public_housing <- read.csv("Public_Housing_Developments.csv")
+```
+
+## Including Plots
+
+You can also embed plots, for example:
+
+```{r}
+head(public_housing)
+```
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+
+```{r}
+ggplot(public_housing, aes(x=HH_INCOME, y=RENT_PER_MONTH)) +
+  geom_point() +
+  geom_smooth()
+```
+
+```{r}
+ggplot(public_housing, aes(x=SPENDING_PER_MONTH, y=REGULAR_VACANT)) +
+  geom_point() +
+  geom_smooth()
+```
+
+```{r}
+ggplot(public_housing, aes(x=PCT_MINORITY, y=SPENDING_PER_MONTH)) +
+  geom_point() +
+  geom_smooth(method = "lm")
+  
+mod = lm(SPENDING_PER_MONTH ~ PCT_MINORITY, data=public_housing)
+summary(mod)
+```
+
+```{r}
+ggplot(public_housing, aes(x=HH_INCOME, y=SPENDING_PER_MONTH)) +
+  geom_point() +
+  geom_smooth(method = "lm")
+
+mod2 = lm(SPENDING_PER_MONTH ~ HH_INCOME, data=public_housing)
+summary(mod2)
+```
+
+```{r}
+PH2 <- public_housing %>%
+  filter(TOTAL_UNITS >= 100)
+
+average <- mean(PH2$HH_INCOME)
+```
+
+
+```{r}
+head(public_housing)
+
+ggplot(public_housing, aes(x=SPENDING_PER_MONTH, y=PCT_FEMALE_HEAD)) +
+  geom_point() +
+  geom_smooth(method = "lm")
+
+mod3 = lm(SPENDING_PER_MONTH ~ PCT_FEMALE_HEAD, data=public_housing)
+summary(mod3)
+```
+
+```{r}
+ggplot(public_housing, aes(x=SPENDING_PER_MONTH, y=PCT_FEMALE_HEAD_CHILD)) +
+  geom_point() +
+  geom_smooth(method = "lm")
+
+mod3 = lm(SPENDING_PER_MONTH ~ PCT_FEMALE_HEAD_CHILD, data=public_housing)
+summary(mod3)
+```
+
