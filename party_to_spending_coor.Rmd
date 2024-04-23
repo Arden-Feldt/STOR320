@@ -1,0 +1,100 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+# Load in Libraries
+```{r}
+library(tidyverse)
+library(dplyr)
+library(ggplot2)
+```
+
+# Load in DF
+```{r}
+public_housing <- read.csv("C:\\Users\\ethan\\OneDrive\\Documents\\STOR320\\finalDF.csv")
+```
+
+# Make a new DF for Scatter Plotting
+```{r}
+scatter_data <- public_housing %>%
+  group_by(State) %>%
+  summarise_all(mean, na.rm = TRUE) %>%
+  select(STATE2KX, SPENDING_PER_MONTH, Republican_Percent, Moderate_Percent, Democrat_Percent, State) %>% 
+  mutate(State = tolower(State)) %>%
+  mutate(Dominant_Party = case_when(
+    Republican_Percent > Moderate_Percent & Republican_Percent > Democrat_Percent ~ "Republican",
+    Moderate_Percent > Republican_Percent & Moderate_Percent > Democrat_Percent ~ "Moderate",
+    Democrat_Percent > Republican_Percent & Democrat_Percent > Moderate_Percent ~ "Democrat",
+    TRUE ~ "Equal"  # If all percentages are equal
+  )) %>%
+  filter(STATE2KX <= 51)
+
+  #gather(key = "Party", value = "value", Republican_Percent, Moderate_Percent, Democrat_Percent) %>%
+
+head(scatter_data, 60)
+#nrow(scatter_data)
+```
+
+# Making Scatter plot (TAKING INTO ACCOUNT POPULATION SIZE DIFFRENCES THIS IS LOWKEY CRAZY)
+```{r}
+ggplot(scatter_data, aes(x = STATE2KX, y = SPENDING_PER_MONTH, size = SPENDING_PER_MONTH, color = Dominant_Party)) +
+  geom_point() +
+  labs(x = "State", y = "Government Spending", color = "Dominant Party") +
+  scale_color_manual(values = c("Republican" = "red", "Moderate" = "gray", "Democrat" = "blue", "Equal" = "purple")) +
+  ggtitle("Government Spending vs. State with Dominant Party Affiliation")
+```
+
+```{r}
+scatter_data2 <- scatter_data %>%
+  filter(Dominant_Party != "Equal")
+
+ggplot(scatter_data2, aes(x = STATE2KX, y = SPENDING_PER_MONTH, size = SPENDING_PER_MONTH, color = Dominant_Party)) +
+  geom_point() +
+  geom_smooth(aes(group = Dominant_Party), method = "lm", se = FALSE) +
+  labs(x = "State", y = "Government Spending", color = "Dominant Party") +
+  scale_color_manual(values = c("Republican" = "red", "Moderate" = "gray", "Democrat" = "blue", "Equal" = "purple")) +
+  ggtitle("Government Spending vs. State with Dominant Party Affiliation")
+
+```
+
+
+# Aditi Idea: First Merge Scatter data and mappable data
+## Map to show trend (State Color is political lean) - dot over is gov't spending
+```{r}
+states <- map_data("state")
+mappable_data <- merge(scatter_data, states, by.x = "State", by.y = "region", all = TRUE, na.rm=FALSE) %>%
+  select(-subregion, -STATE2KX)
+
+head(mappable_data)
+```
+# Map it out
+```{r}
+ggplot(mappable_data, aes(long, lat)) +
+  geom_polygon(aes(group = group, fill = Dominant_Party), color = "black") + 
+  coord_map() +
+  scale_fill_manual(values = c("Republican" = "red", "Moderate" = "gray", "Democrat" = "blue", "Equal" = "purple")) +
+  ggtitle("Party Affiliation by State")
+```
+
+```{r}
+ggplot(mappable_data, aes(long, lat)) +
+  geom_polygon(aes(group = group, fill = SPENDING_PER_MONTH), color = "black") + 
+  coord_map() +
+  scale_fill_gradient(low = "white", high = "red") +
+  ggtitle("Spending by State")
+```
+
+
+# Lowkey this graph just didnt turn out
+```{r}
+ggplot(mappable_data, aes(long, lat)) +
+  geom_polygon(aes(group = group, fill = SPENDING_PER_MONTH, color = Dominant_Party), size = 1) +
+  scale_color_manual(values = c("Republican" = "red", "Moderate" = "gray", "Democrat" = "blue", "Equal" = "purple")) +
+  scale_fill_gradient(low = "white", high = "black") +
+  coord_map() +
+  theme_minimal() +
+  labs(title = "Spending per State")
+```
+
+# With more time maybe do the dot but thats gonna take me making a new df and merging it back in I think
