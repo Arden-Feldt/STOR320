@@ -1,18 +1,146 @@
 ---
-title: "R Notebook"
-output: html_notebook
+title: "mapping"
+output:
+  html_document:
+    df_print: paged
 ---
 
-This is an [R Markdown](http://rmarkdown.rstudio.com) Notebook. When you execute code within the notebook, the results appear beneath the code. 
-
-Try executing this chunk by clicking the *Run* button within the chunk or by placing your cursor inside it and pressing *Ctrl+Shift+Enter*. 
-
+# SETUP <3
+## Only run to install necessary packages
 ```{r}
-plot(cars)
+# install.packages("maps")
+# install.packages("mapproj")
+# install.packages("tidyverse")
+```
+## Load in libraries
+```{r}
+library(maps)
+library(mapproj)
+library(tidyverse)
 ```
 
-Add a new chunk by clicking the *Insert Chunk* button on the toolbar or by pressing *Ctrl+Alt+I*.
+## Upload your files
+```{r}
+# Set to your project location
+setwd("C:\\Users\\ethan\\OneDrive\\Desktop\\STOR320")
 
-When you save the notebook, an HTML file containing the code and output will be saved alongside it (click the *Preview* button or press *Ctrl+Shift+K* to preview the HTML file).
+# Change to your file locations
+public_housing_messy <- read_csv("C:\\Users\\ethan\\OneDrive\\Documents\\STOR320\\Final Project\\Public_Housing_Developments.csv")
+party_politics_messy <- read_csv("C:\\Users\\ethan\\OneDrive\\Documents\\STOR320\\Final Project\\states.txt")
+states_messy <- map_data("state")
+```
 
-The preview shows you a rendered HTML copy of the contents of the editor. Consequently, unlike *Knit*, *Preview* does not run any R code chunks. Instead, the output of the chunk when it was last run in the editor is displayed.
+# Show it worked !
+```{r}
+# Use head() as public_housing is so large that str() and print() are ugly as hell
+head(public_housing_messy)
+head(party_politics_messy)
+head(states_messy)
+```
+
+# Public Housing Cleanup
+```{r}
+public_housing <- public_housing_messy %>%
+  select(TOTAL_UNITS, SPENDING_PER_MONTH, RENT_PER_MONTH, STATE2KX) %>%
+  rename(STATE = STATE2KX) %>%
+  group_by(STATE) %>%
+  summarise_all(sum) %>%
+  mutate(STATE = as.numeric(STATE))
+
+head(public_housing)
+```
+
+# Party Affiliation Cleanup
+```{r}
+# Give states census alphabet numbers
+party_politics <- party_politics_messy %>%
+  mutate(id = row_number()) %>%
+  # Remove useless column
+  select(-5) %>%
+  # Make names pretty
+  rename(`Republican_Percent` = `Republicanlean Rep.`, `Moderate_Percent`=`No lean`, `Democrat_Percent` = `Democratlean Dem.`) %>%
+  # Replace '%' signs
+  mutate_at(vars(Republican_Percent, Moderate_Percent, Democrat_Percent), ~ gsub("%", "", .)) %>%
+  # Make all numeric
+  mutate_at(vars(Republican_Percent, Moderate_Percent, Democrat_Percent), as.numeric) %>%
+  # Accuratly make percents
+  mutate_at(vars(Republican_Percent, Moderate_Percent, Democrat_Percent), ~ ./100) %>%
+  # To match all the other data sets
+  mutate(State = tolower(State))
+
+head(party_politics)
+```
+
+# Mergin Time
+```{r}
+parties_and_public <- merge(public_housing, party_politics, by.x = "STATE", by.y = "id", all = TRUE, na.rm=FALSE)
+#head(parties_and_public)
+
+final_df_messy <- merge(parties_and_public, states_messy, by.x = "State", by.y = "region")
+head(final_df_messy)
+```
+
+# Clean Up the mess we made
+```{r}
+final_df <- final_df_messy %>%
+  select(-subregion) %>%
+  rename(id = STATE)
+
+head(final_df)
+```
+
+
+# Mapping the housing by state
+```{r}
+# Gov't spending per month
+ggplot(final_df, aes(long, lat)) + 
+  geom_polygon(aes(group = group, fill = SPENDING_PER_MONTH)) + 
+  coord_map() +
+  ggtitle("Gov't Spending per Month by State")
+
+# TOTAL_UNITS
+ggplot(final_df, aes(long, lat)) + 
+  geom_polygon(aes(group = group, fill = TOTAL_UNITS)) + 
+  coord_map() +
+  ggtitle("Total Public Housing Units by State")
+
+# Average Rent Per Month
+ggplot(final_df, aes(long, lat)) + 
+  geom_polygon(aes(group = group, fill = RENT_PER_MONTH)) + 
+  coord_map() +
+  ggtitle("Average Rent per Month for Public Housing Developments by State")
+```
+
+# Mapping the politics by state
+```{r}
+# max(final_df$Republican_Percent)
+# max(final_df$Democrat_Percent)
+# max(final_df$Moderate_Percent)
+
+# min(final_df$Republican_Percent)
+# min(final_df$Democrat_Percent)
+# min(final_df$Moderate_Percent)
+
+
+# Lean Dem
+ggplot(final_df, aes(long, lat)) + 
+  geom_polygon(aes(group = group, fill = Democrat_Percent)) + 
+  coord_map() +
+  ggtitle("Percent of Citiziens to Lean Toward The Democratic Party by State") +
+  scale_fill_continuous(limits = c(0, .75))
+
+# Lean Moderate
+ggplot(final_df, aes(long, lat)) + 
+  geom_polygon(aes(group = group, fill = Moderate_Percent)) + 
+  coord_map() +
+  ggtitle("Percent of Citiziens to Lean Toward Moderate/Neither Party by State") +
+  scale_fill_continuous(limits = c(0, .75))
+
+# Lean Rep
+ggplot(final_df, aes(long, lat)) + 
+  geom_polygon(aes(group = group, fill = Republican_Percent)) + 
+  coord_map() +
+  ggtitle("Percent of Citiziens to Lean Toward The Republican Party by State") +
+  scale_fill_continuous(limits = c(0, .75))
+```
+
