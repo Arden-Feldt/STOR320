@@ -25,15 +25,6 @@ public_housing = read_csv("C:\\Users\\ethan\\OneDrive\\Documents\\STOR320\\final
 head(public_housing)
 
 current_directory <- getwd()
-
-# Specify the filename
-filename <- "your_script.R"
-
-# Get the full path to the file
-file_path <- file.path(current_directory, filename)
-
-# Print the file path
-print(file_path)
 ```
 
 
@@ -43,7 +34,7 @@ Minorities:
 
 ```{r pressure, echo=FALSE}
 public_housing_long <- public_housing %>%
-  select(PCT_BLACK, PCT_NATIVE_AMERICAN, PCT_ASIAN, PCT_HISPANIC, ANNL_EXPNS_AMNT) %>%
+  select(PCT_BLACK, PCT_NATIVE_AMERICAN, PCT_ASIAN, PCT_HISPANIC, ANNL_EXPNS_AMNT, Republican_Percent, Moderate_Percent, Democrat_Percent) %>%
   pivot_longer(cols = c(PCT_BLACK, PCT_NATIVE_AMERICAN, PCT_ASIAN, PCT_HISPANIC),
                names_to = "Minority_Group", values_to = "Percentage") 
 
@@ -63,33 +54,35 @@ public_housing_long %>%
 big_spend = public_housing %>% filter(SPENDING_PER_MONTH > 2000) 
 small_spend = public_housing %>% filter(SPENDING_PER_MONTH <= 2000)
 
+public_housing %>% filter(SPENDING_PER_MONTH <= 2000) %>% ggplot(aes(x = Republican_Percent, y = SPENDING_PER_MONTH)) + geom_point() + geom_smooth()
+public_housing %>% filter(SPENDING_PER_MONTH <= 2000) %>% ggplot(aes(x = Moderate_Percent, y = SPENDING_PER_MONTH)) + geom_point() + geom_smooth()
+public_housing %>% filter(SPENDING_PER_MONTH <= 2000) %>% ggplot(aes(x = Democrat_Percent, y = SPENDING_PER_MONTH)) + geom_point() + geom_smooth()
 
-public_housing %>% filter(SPENDING_PER_MONTH > 2000) %>% ggplot(aes(x = TMINORITY, y = SPENDING_PER_MONTH)) + geom_point() + geom_smooth()
-public_housing %>% filter(SPENDING_PER_MONTH > 2000) %>% ggplot(aes(x = TPOVERTY, y = SPENDING_PER_MONTH)) + geom_point() + geom_smooth()
-public_housing %>% filter(SPENDING_PER_MONTH > 2000) %>% ggplot(aes(x = TPCT_OWNSFD, y = SPENDING_PER_MONTH)) + geom_point() + geom_smooth()
+public_housing %>% filter(SPENDING_PER_MONTH <= 2000) %>% ggplot(aes(x = SPENDING_PER_MONTH, y = Republican_Percent)) + geom_point() + geom_smooth()
+public_housing %>% filter(SPENDING_PER_MONTH <= 2000) %>% ggplot(aes(x = SPENDING_PER_MONTH, y = Moderate_Percent)) + geom_point() + geom_smooth()
+public_housing %>% filter(SPENDING_PER_MONTH <= 2000) %>% ggplot(aes(x = SPENDING_PER_MONTH, y = Democrat_Percent)) + geom_point() + geom_smooth()
+```
 
-public_housing %>% filter(SPENDING_PER_MONTH <= 2000) %>% ggplot(aes(x = TMINORITY, y = SPENDING_PER_MONTH)) + geom_point() + geom_smooth()
-public_housing %>% filter(SPENDING_PER_MONTH <= 2000) %>% ggplot(aes(x = TPOVERTY, y = SPENDING_PER_MONTH)) + geom_point() + geom_smooth()
-public_housing %>% filter(SPENDING_PER_MONTH <= 2000) %>% ggplot(aes(x = TPCT_OWNSFD, y = SPENDING_PER_MONTH)) + geom_point() + geom_smooth()
 
+```{r pressure, echo=FALSE}
 small_spend = small_spend %>% mutate(poverty_indicator = ifelse(TPOVERTY <= 50, 0, 1))
 
-mod = lm(SPENDING_PER_MONTH ~ TMINORITY + TPOVERTY + TPCT_OWNSFD , data = small_spend)
+mod = lm(SPENDING_PER_MONTH ~ Republican_Percent + Moderate_Percent + Democrat_Percent , data = small_spend)
 summary(mod)
 
 library(dplyr)
 
 # Select only numerical variables
-numerical_public <- public_housing %>% select_if(is.numeric)
+#numerical_public <- public_housing %>% select_if(is.numeric)
 
-full_mod = lm(SPENDING_PER_MONTH ~ ., data = numerical_public)
-summary(full_mod)
+#full_mod = lm(SPENDING_PER_MONTH ~ ., data = numerical_public)
+#summary(full_mod)
 
 
-numerical_public <- small_spend %>% select_if(is.numeric)
+#numerical_public <- small_spend %>% select_if(is.numeric)
 
-full_mod1 = lm(SPENDING_PER_MONTH ~ ., data = numerical_public)
-summary(full_mod1)
+#full_mod1 = lm(SPENDING_PER_MONTH ~ ., data = numerical_public)
+#summary(full_mod1)
 ```
 
 ## LOOKING AT LOCATION
@@ -106,21 +99,4 @@ state_house %>%
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
 
 manage_house = public_housing %>% group_by(PARTICIPANT_CODE) %>% summarize(avg_spending = mean(SPENDING_PER_MONTH), avg_rent = mean(RENT_PER_MONTH))
-```
-##LOOKING AT CALIFORNIA, TEXAS, NEW YORK
-
-```{r}
-CA = public_housing %>% filter(STATE2KX == "06")
-TX = public_housing %>% filter(STATE2KX == "48")
-NY = public_housing %>% filter(STATE2KX == "36")
-
-CA %>% filter(SPENDING_PER_MONTH <= 2000) %>% ggplot(aes(x=TMINORITY, y=SPENDING_PER_MONTH)) + geom_point() + geom_smooth()
-TX %>% filter(SPENDING_PER_MONTH <= 2000) %>% ggplot(aes(x=TMINORITY, y=SPENDING_PER_MONTH)) + geom_point() + geom_smooth()
-NY %>% filter(SPENDING_PER_MONTH <= 2000) %>% ggplot(aes(x=TMINORITY, y=SPENDING_PER_MONTH)) + geom_point() + geom_smooth()
-
-CA %>% filter(SPENDING_PER_MONTH > 2000) %>% ggplot(aes(x=TPCT_OWNSFD, y=SPENDING_PER_MONTH)) + geom_point() + geom_smooth()
-TX %>% filter(SPENDING_PER_MONTH > 2000) %>% ggplot(aes(x=TPCT_OWNSFD, y=SPENDING_PER_MONTH)) + geom_point() + geom_smooth()
-NY %>% filter(SPENDING_PER_MONTH > 2000) %>% ggplot(aes(x=TPCT_OWNSFD, y=SPENDING_PER_MONTH)) + geom_point() + geom_smooth()
-
-
 ```
