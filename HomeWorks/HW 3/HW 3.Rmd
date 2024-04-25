@@ -1,0 +1,126 @@
+---
+title: "Homework 3"
+author: "Arden Feldt"
+date: "`r format(Sys.time(), '%B %d, %Y')`"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Instructions
+
+**Exercises:**  1,3 (Pgs. 90-91); 1 (Pg. 93); 2,4 (Pg. 99); 1,2 (Pg. 101); 2,3,5 (Pg. 104)
+
+**Submission:** Submit via an electronic document on Sakai. Must be submitted as a HTML file generated in RStudio. All assigned problems are chosen according to the textbook *R for Data Science*. You do not need R code to answer every question. If you answer without using R code, delete the code chunk. If the question requires R code, make sure you display R code. If the question requires a figure, make sure you display a figure. A lot of the questions can be answered in written response, but require R code and/or figures for understanding and explaining.
+
+```{r, include=FALSE}
+library(tidyverse)
+library(lvplot)
+library(nycflights13)
+#?diamonds
+```
+
+# Chapter 5 (Pgs. 90-91)
+
+
+
+##  Exercise 1
+```{r}
+minMons <- filter(diamonds, y < 20, x < 20, z < 20)
+par(mfrow = c(1, 3))
+ggplot(minMons) +  geom_histogram(mapping = aes(x = x), binwidth = 0.5)
+ggplot(minMons) +  geom_histogram(mapping = aes(x = y), binwidth = 0.5)
+ggplot(minMons) +  geom_histogram(mapping = aes(x = z), binwidth = 0.5)
+```
+
+
+Length and width have very similar histograms, implying most diamonds shy away from being heavily ovular or rectagunlar. Depth has the least range of any of the three values, but that makes sense as its the only one thats not directly seen when looking at a stone. I would say that most diamonds are pretty uniform in their shape, though a little shallow (like flattened).
+
+##  Exercise 3
+```{r}
+carrat99 <- nrow(filter(diamonds, carat == .99))
+carrat1 <- nrow(filter(diamonds, carat == 1))
+sprintf(".99: %d || 1: %d", carrat99, carrat1)
+```
+This is totally marketing. Humans like whole numbers, who wants a 0.99 carat diamond. 1 sounds so much better. I'm sure most .99 carat diamonds are mistakes or that was all they could get. I would be intrested in seeing the average price difference between the two carat amounts too. 
+
+# Chapter 5 (Pg. 93)
+
+##  Exercise 1
+
+Because histograms represent numerical data, missing values are usually cut/ignored, as they are not numbers. However, a bar chart can take categorical values, and thus is liable to make a "bar" for all the missing values, treating it like another value. 
+
+# Chapter 5 (Pg. 99)
+
+##  Exercise 2
+```{r}
+#columnz <- list("carat", "cut", "color", "clarity", "x","y","z", "depth","table")
+#for (i in columnz) {
+#print(ggplot(data = diamonds) +  geom_boxplot(
+#  mapping = aes(
+#   x= depth,  y = price   )  ))
+#}
+ggplot(data = diamonds, mapping = aes(x = x, y = price)) +  geom_point()
+```
+
+inversely predicts: clarity
+Not huge predictors of price: carat, cut, depth,
+Predictors: Color, CARAT, X, Y, Z
+Unsure: table
+
+Okay so it seems like the only real predictors are size. People want BIG diamonds. Even if they are 'lowquality', people dont seem to care and want big ones, over inflating the poor quality ones price. Now of course this is all made up and the scarcity of diamonds is artificial and ridiculous but nevertheless, size seems important, and also color, but less so. 
+
+##  Exercise 4
+```{r}
+install.packages("lvplot")
+ggplot(data = diamonds, mapping = aes(x = cut, y = price)) +  geom_lv()
+```
+
+My first iterpreation of this plot is that these look like giant maggots/grubs/worms and I kind of hate that a lot. After that I do like they way to represents the waxing and waining of data. I think it does a decent job, but I am assuming the big box is the median to it looks like nothin is on the tail end when there is a lot, just not as spread.
+# Chapter 5 (Pg. 101)
+
+##  Exercise 1
+I think making the scale logarithmic would make things way more visible. I would also change the color, I dont like the dark blue, its not easy to see. 
+
+##  Exercise 2
+```{r}
+head(flights)
+flight_delays <- flights %>%
+  group_by(dest, month) %>%
+  summarize(avg_delay = mean(dep_delay, na.rm = TRUE), .groups = 'drop')
+
+ggplot(flight_delays, aes(x = dest, y = month, fill = avg_delay)) +
+  geom_tile() +
+  scale_fill_gradient(low = "lightblue", high = "darkblue") +
+  labs(title = "Average Flight Delay by Destination and Month",
+       x = "Destination",
+       y = "Month",
+       fill = "Average Delay (minutes)")
+```
+
+There are way to many destinations. I cant read them at all.
+
+# Chapter 5 (Pg. 104)
+
+##  Exercise 2
+```{r}
+ggplot(diamonds, mapping = aes(x = carat, y = price)) +
+  geom_boxplot(mapping = aes(group = cut_number(carat, 20)))
+
+ggplot(diamonds, mapping = aes(x = price, y = carat)) +  
+  geom_boxplot(mapping = aes(group = cut_number(price, 30)))
+
+```
+
+##  Exercise 3
+Larger Diamonds Cost substationally more. This is not suprising, it goes pretty in line with my other findings.
+
+##  Exercise 5
+```{r}
+ggplot(data = diamonds) +  geom_point(mapping = aes(x = x, y = y)) +
+  coord_cartesian(xlim = c(4, 11), ylim = c(4, 11))
+```
+
+Because both of these values are continous, its best to look at them without partitioning them up.

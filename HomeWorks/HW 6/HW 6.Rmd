@@ -1,0 +1,215 @@
+---
+title: "Homework 6"
+author: "FIRSTNAME LASTNAME"
+date: "`r format(Sys.time(), '%B %d, %Y')`"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Instructions
+
+**Exercises:**  4 (Pg. 302); 1 (Pgs. 316-317); 1 (Pgs. 328-329); 1, 2 (Pgs. 353-354)
+
+**Submission:** Submit via an electronic document on Sakai. Must be submitted as a HTML file generated in RStudio. All assigned problems are chosen according to the textbook *R for Data Science*. You do not need R code to answer every question. If you answer without using R code, delete the code chunk. If the question requires R code, make sure you display R code. If the question requires a figure, make sure you display a figure. A lot of the questions can be answered in written response, but require R code and/or figures for understanding and explaining.
+
+```{r, include=FALSE}
+library(tidyverse)
+```
+
+# Chapter 16 (Pg. 302)
+
+##  Exercise 4
+
+### a)
+```{r}
+as.integer(2.7)
+as.integer(2.2)
+```
+
+### b)
+```{r}
+round(1.2)
+round(1.5)
+round(1.6)
+```
+
+### c)
+```{r}
+floor(.9)
+floor(.2)
+```
+
+### d)
+```{r}
+trunc(1.9)
+trunc(1.2)
+```
+
+  as.integer(), round(), floor(), trunc()
+as.integer(): basically just floors the numbers. which means take the double you have drop everything right of the decimal point.
+round(): this one is the one that opperates as you expect. everything below .5 floors, everything equal to and above .5 rounds up.
+floor(): acts like as.integer(), and rounds down no matter the decimal.
+trunc(): truncates after the deciamal point, so basically acts like floor too.
+
+# Chapter 17 (Pgs. 316-317)
+
+##  Exercise 1
+
+### a)
+```{r}
+data(mtcars)
+head(mtcars)
+column_means <- numeric(length(mtcars))
+for (i in seq_along(mtcars)) {
+    column_means[i] <- mean(mtcars[[i]])
+}
+print(column_means)
+```
+
+### b)
+```{r}
+#install.packages("nycflights13")
+
+library(nycflights13)
+
+data(flights)
+
+num_cols <- ncol(flights)
+
+column_types <- vector("character", length = num_cols)
+
+for (i in 1:num_cols) {
+  column_types[i] <- class(flights[[i]])
+}
+
+print(column_types)
+```
+
+### c)
+```{r}
+data(iris)
+
+#print(iris)
+
+num_cols <- ncol(iris)
+
+column_types <- vector("character", length = num_cols)
+
+for (i in 1:num_cols) {
+  unique_counts <- sapply(iris, function(x) length(unique(x)))
+}
+
+
+print(unique_counts)
+```
+
+### d)
+```{r}
+means <- c(-10, 0, 10, 100)
+
+random_normals <- list()
+
+for (mean in means) {
+  random_normals[[as.character(mean)]] <- rnorm(10, mean = mean)
+}
+
+print(random_normals)
+```
+
+# Chapter 17 (Pgs. 328-329)
+
+##  Exercise 1
+
+### a)
+```{r}
+library(purrr)
+data(mtcars)
+
+
+means <- map_dbl(mtcars, ~mean(., na.rm = TRUE))
+print(means)
+```
+
+### b)
+```{r}
+library(nycflights13)
+types <- map_chr(flights, typeof)
+
+
+print(types)
+```
+
+### c)
+```{r}
+data(iris)
+
+unique_counts <- map_int(iris, ~length(unique(.)))
+
+print(unique_counts)
+```
+
+### d)
+```{r}
+means <- c(-10, 0, 10, 100)
+
+random_normals <- map(means, ~rnorm(10, mean = .))
+
+print(random_normals)
+```
+
+# Chapter 18 (Pgs. 353-354)
+
+##  Exercise 1
+```{r}
+library(tibble)
+library(ggplot2)
+```
+
+
+```{r}
+sim1a <- tibble(
+  x = rep(1:10, each = 3),
+  y = x * 1.5 + 6 + rt(length(x), df = 2) 
+)
+
+#model <- lm(y ~ x, data = sim1a)
+
+ggplot(sim1a, aes(x = x, y = y)) + 
+  geom_point() + 
+  geom_smooth(method = "lm")
+```
+
+okay I know I'm supposed to say that the oultiers are pulling the line in a direction. But honestly it doesn't look like its moving that much. Like I can tell it shifts a little, but that makes sense since the points are so far away.
+
+##  Exercise 2
+```{r}
+measure_distance <- function(coefficients, data) {
+  predicted <- data$x * coefficients[1] + coefficients[2]
+  diff <- data$y - predicted
+  mean_abs_dist <- mean(abs(diff))
+  return(mean_abs_dist)
+}
+
+sim1a <- tibble(
+  x = rep(1:10, each = 3),
+  y = x * 1.5 + 6 + rt(length(x), df = 2)
+)
+
+fit_optim <- optim(
+  c(1, 1),                    
+  measure_distance,           
+  data = sim1a,               
+  method = "Nelder-Mead"      
+)
+
+coefficients_optim <- fit_optim$par
+print(coefficients_optim)
+
+fit_lm <- lm(y ~ x, data = sim1a)
+print(coef(fit_lm))
+```
+
+You can see the results are flipped and consistently slightly different (slightly is not a super clear signifier but you get it)

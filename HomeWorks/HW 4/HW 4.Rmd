@@ -1,0 +1,165 @@
+---
+title: "Homework 4"
+author: "FIRSTNAME LASTNAME"
+date: "`r format(Sys.time(), '%B %d, %Y')`"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Instructions
+
+**Exercises:**  2,3 (Pg. 151); 2,4 (Pg. 156); 1,2 (Pgs. 160-161); 2 (Pg. 163); 2,3,4 (Pg. 168)
+
+**Submission:** Submit via an electronic document on Sakai. Must be submitted as a HTML file generated in RStudio. All assigned problems are chosen according to the textbook *R for Data Science*. You do not need R code to answer every question. If you answer without using R code, delete the code chunk. If the question requires R code, make sure you display R code. If the question requires a figure, make sure you display a figure. A lot of the questions can be answered in written response, but require R code and/or figures for understanding and explaining.
+
+```{r, include=FALSE}
+library(tidyverse)
+```
+
+# Chapter 9 (Pg. 151)
+
+##  Exercise 2
+```{r}
+table2_cases <- table2 %>% 
+  filter(type == 'cases') %>%
+  rename(cases = count)
+
+print(table2_cases)
+
+table2_populations <- filter(table2, type == 'population') %>% rename(population = count)
+
+print(table2_populations)
+
+finaltable <- table2_cases %>% mutate(population = table2_populations$population, rate = (cases / population) * 10000) 
+
+frfinaltable <- finaltable %>% 
+  gather("cases", "population", "rate", key = 'type', value = 'count') %>%
+  arrange(country, year, type)
+
+print(frfinaltable)
+
+print(table4a) # cases
+print(table4b) # populations
+
+tabletry <- gather(table4a, '1999', '2000', key = 'year', value = 'cases')
+head(tabletry)
+final4 <- gather(table4b, '1999', '2000',key = 'year', value = 'population') %>%
+  mutate(cases = tabletry$cases, rate = (cases / population) * 10000) %>%
+  gather('population', 'cases', 'rate', key = 'type', value = 'count') %>%
+  arrange(country, year, type)
+
+print(final4)
+  
+```
+
+I feel like Table4 was easier to work with, even though it was two tables, I got way fewer errors from it. table2 having all the data mushed together was just needlessly hard to work with. 
+
+Coming back to this answer, pretty sure this isnt what you wanted, and I def had more errors with table2 because I did it first.
+
+##  Exercise 3
+```{r}
+print(table1)
+print(table2)
+fixedup <- spread(table2, key = 'type', value = 'count')
+print(fixedup)
+
+library(ggplot2) 
+ggplot(fixedup, aes(year, cases)) +  geom_line(aes(group = country), color = "grey50") +  geom_point(aes(color = country))
+```
+
+# Chapter 9 (Pg. 156)
+
+##  Exercise 2
+```{r}
+#table4a %>%  gather(1999, 2000, key = "year", value = "cases") 
+table4a %>%  gather('1999', '2000', key = "year", value = "cases") 
+#> Error in eval(expr, envir, enclos): #> Position must be between 0 and n
+```
+
+The code fails because the columns in gather need to be inside '' marks. You cant just put in the column name raw. RStudio is reading 1999 and 2000 as numbers in the first line.
+
+##  Exercise 4
+```{r}
+preg <- tribble(  ~pregnant, ~male, ~female,  "yes",     NA,    10,  "no",      20,    12 )
+print(preg)
+#ppreg <- spread(preg, key = "pregnant", value = 'female'', value = 'male'') %>%
+#  rename(female_not_preg = no, female_preg = yes) #%>% 
+  #spread(preg, key = "male", value = 'male') %>%
+  #rename(female_not_preg = no, female_preg = yes) 
+
+preg_tidy <- preg %>%
+  gather(key = "gender", value = "count", -pregnant)
+print(preg_tidy)
+```
+
+I tidyed it with a gather, collecting the male and female columns into just one gender column that hold the counts next to it.
+
+# Chapter 9 (Pgs. 160-161)
+
+##  Exercise 1
+```{r}
+tibble(x = c("a,b,c", "d,e,f,g", "h,i,j")) %>%  separate(x, c("one", "two", "three"), extra = "merge") 
+tibble(x = c("a,b,c", "d,e", "f,g,i")) %>%  separate(x, c("one", "two", "three"), fill = "left")
+```
+
+Fill desides if the values are 'right aligned' or 'left aligned' when there are not enough values for columns. Extra, unsuprisingly lets you pick what to do if there are more values than columns, like drop the value or merge the extra ones on at the end. 
+##  Exercise 2
+
+For unite if remove=false, the united columns will remain in the tibble with the newly combined one. Similarly, in seperate, if remove = false: the column you just split will remain in its unaltered form, with the split columns added in addition.
+
+# Chapter 9 (Pg. 163)
+
+##  Exercise 2
+
+Direction in fill lets you do what fill above does, but for vertical movement too. So you can push all values down to the bottom or pull them up. Think of it like tetris, where things fall as long as there is nothing beneath them.
+
+# Chapter 9 (Pg. 168)
+
+##  Exercise 2
+```{r}
+print(who)
+tiddywho <- who %>%  gather(code, value, new_sp_m014:newrel_f65, na.rm = TRUE) %>%
+  #mutate(    code = stringr::str_replace(code, "newrel", "new_rel")  ) %>%  
+  separate(code, c("new", "var", "sexage")) %>%  select(-new, -iso2, -iso3) %>%  
+  separate(sexage, c("sex", "age"), sep = 1)
+print(tiddywho)
+```
+
+In this case there is no issue, but the rest of the code could have been built on the assumption that new_rel would be what it sees, and it was given newrel, it could puke. It just didnt seem to here. Lucky.
+
+##  Exercise 3
+```{r}
+print(who)
+unique_mapping <- who %>%
+  group_by(iso2, iso3) %>%
+  summarise(n_distinct_countries = n_distinct(country), .groups = 'drop') %>%
+  ungroup()
+print(unique_mapping)
+
+max_val <- max(unique_mapping$n_distinct_countries)
+print(max_val)
+
+```
+
+You can see that the max value of distince contries for every iso2 and iso3 is 1. That means that they are directly coorelated to the country. They are one-to-one and completely redundant.
+
+##  Exercise 4
+```{r}
+print(tiddywho)
+total_tb <- tiddywho %>%
+  group_by(country, year, sex) %>%
+  summarise(total_cases = sum(value, na.rm = TRUE), .groups = "drop") %>%
+  ungroup()
+
+print(total_tb)
+
+# If i include the legend it takes up so much space you cant see the visualization.
+ggplot(total_tb, aes(x = year, y=total_cases, color = country, shape = sex)) + geom_point() + theme(legend.position = "none")
+#country is the issue bc there are so many unique values so I offer this
+ggplot(total_tb, aes(x = year, y=total_cases, color = sex)) + geom_point() + 
+  geom_smooth(method = "lm")
+#bc does the country reaaaaaly matter?
+```

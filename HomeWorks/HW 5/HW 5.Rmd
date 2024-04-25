@@ -1,0 +1,145 @@
+---
+title: "Homework 5"
+author: "FIRSTNAME LASTNAME"
+date: "`r format(Sys.time(), '%B %d, %Y')`"
+output: html_document
+---
+
+```{r setup, include=T}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Instructions
+
+**Exercises:**  1,3 (Pg. 227); 2 (Pg. 232); 1,2 (Pg. 235); 
+
+**Submission:** Submit via an electronic document on Sakai. Must be submitted as a HTML file generated in RStudio. All assigned problems are chosen according to the textbook *R for Data Science*. You do not need R code to answer every question. If you answer without using R code, delete the code chunk. If the question requires R code, make sure you display R code. If the question requires a figure, make sure you display a figure. A lot of the questions can be answered in written response, but require R code and/or figures for understanding and explaining.
+
+```{r, include=T}
+library(tidyverse)
+```
+
+# Chapter 12 (Pg. 227)
+
+##  Exercise 1
+```{r}
+#
+ggplot(gss_cat, aes(rincome)) +
+  geom_bar() +
+  scale_x_discrete(drop = FALSE) +
+  coord_flip() 
+```
+
+All of the axis's bleed together and are completely unreadible, to remedy this, flip the coordinates.
+
+##  Exercise 3
+```{r}
+ggplot(gss_cat, aes(x = relig, y = denom)) +
+  geom_point() +
+  scale_x_discrete(drop = FALSE) + 
+  coord_flip() 
+```
+
+It seems that denom(ination) only really applies to protestant, however some christaians and others chose to answer as well.
+
+# Chapter 12 (Pg. 232)
+
+##  Exercise 2
+```{r}
+head(gss_cat)
+
+ggplot(gss_cat, aes(x=denom)) +
+  geom_bar() + 
+  coord_flip()
+
+ggplot(gss_cat, aes(x=marital)) +
+  geom_bar()
+
+ggplot(gss_cat, aes(x=race)) +
+  geom_bar()
+
+ggplot(gss_cat, aes(x=rincome)) +
+  geom_bar() + 
+  coord_flip()
+
+ggplot(gss_cat, aes(x=partyid)) +
+  geom_bar() +
+  coord_flip()
+
+ggplot(gss_cat, aes(x=relig)) +
+  geom_bar() + 
+  coord_flip()
+```
+Arbitrary:
+Denom (i think, I know nothing about religion)
+race
+relig
+
+Principalled:
+marital (i can/will argue this, i see a logic)
+rincome
+partyid
+
+# Chapter 12 (Pg. 235)
+
+##  Exercise 1
+```{r}
+party_proportions <- gss_cat %>%
+  group_by(year, partyid) %>%
+  summarise(count = n(), .groups = "drop") %>%
+  mutate(proportion = count / sum(count))
+
+# Plot the data
+ggplot(party_proportions, aes(x = year, y = proportion, color = partyid)) +
+  geom_line() +
+  labs(title = "Proportions of Party Identification Over Time",
+       x = "Year",
+       y = "Proportion",
+       color = "Party Identification")
+```
+
+Party Identification seemed to go way up right before the 2008 elections and then returned to a baseline disintrest for the rest of the time period.
+
+Fialed code:
+polidata <- gss_cat %>%
+  group_by(year) %>%
+  summarise(year_count = n(), .groups='drop') %>%
+  group_by(partyid, year) %>%
+  summarise(partyID_count = n()/year_count, .groups='drop')
+
+head(polidata)
+
+ggplot(polidata, aes(x=year, y=n, color = partyid, group = partyid)) +
+  geom_point() + 
+  geom_smooth(method = "lm", se = FALSE) 
+
+##  Exercise 2
+```{r}
+gss_colapsed <- gss_cat %>%
+  mutate(rincome_collapsed = recode(rincome,
+                                    `No answer` = "Unknown",
+                                    `Don't know` = "Unknown",
+                                    `Refused` = "Unknown",
+                                    `$25000 or more` = "High income",
+                                    `$20000 - 24999` = "High income",
+                                    `$15000 - 19999` = "Medium income",
+                                    `$10000 - 14999` = "Medium income",
+                                    `$8000 to 9999` = "Low income",
+                                    `$7000 to 7999` = "Low income",
+                                    `$6000 to 6999` = "Low income",
+                                    `$5000 to 5999` = "Low income",
+                                    `$4000 to 4999` = "Low income",
+                                    `$3000 to 3999` = "Low income",
+                                    `$1000 to 2999` = "Low income",
+                                    `Lt $1000` = "Low income",
+                                    `Not applicable` = "Unknown"
+                                    ))
+
+ggplot(gss_colapsed, aes(x=rincome_collapsed)) +
+  geom_bar() + 
+  coord_flip()
+```
+
+Like that ^.
+
+By recoding the columns info I am able to drasically cut down the number of unique values in the column.
