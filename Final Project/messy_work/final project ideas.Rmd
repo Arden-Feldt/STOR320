@@ -13,6 +13,7 @@ knitr::opts_chunk$set(echo = TRUE)
 IMPORTING DATA
 
 ```{r}
+library(tidyverse)
 public_housing = read_csv("Public_Housing_Developments.csv") %>% filter(PCT_MINORITY >= 0)
 ```
 

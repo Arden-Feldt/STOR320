@@ -20,7 +20,7 @@ public_housing <- read.csv("C:\\Users\\ethan\\OneDrive\\Documents\\STOR320\\fina
 scatter_data <- public_housing %>%
   group_by(State) %>%
   summarise_all(mean, na.rm = TRUE) %>%
-  select(STATE2KX, SPENDING_PER_MONTH, Republican_Percent, Moderate_Percent, Democrat_Percent, State) %>% 
+  select(STATE2KX, SPENDING_PER_MONTH, Republican_Percent, Moderate_Percent, Democrat_Percent, State, RENT_PER_MONTH) %>% 
   mutate(State = tolower(State)) %>%
   mutate(Dominant_Party = case_when(
     Republican_Percent > Moderate_Percent & Republican_Percent > Democrat_Percent ~ "Republican",
@@ -98,3 +98,26 @@ ggplot(mappable_data, aes(long, lat)) +
 ```
 
 # With more time maybe do the dot but thats gonna take me making a new df and merging it back in I think
+
+# Okay but for now we are instead going to do the thing Wario asked:
+
+# First we got SPENDING:
+```{r}
+ggplot(scatter_data, aes(x = Dominant_Party, y = SPENDING_PER_MONTH, fill = Dominant_Party)) +
+  geom_boxplot() +
+  stat_summary(fun = mean, geom = "point", shape = 23, size = 3, fill = "white") +
+  labs(x = "Dominant Party", y = "SPENDING_PER_MONTH", fill = "Dominant Party") +
+  scale_fill_manual(values = c("Republican" = "red", "Democrat" = "blue", "Equal" = "purple")) +
+  ggtitle("SPENDING_PER_MONTH by Dominant Party with Confidence Intervals")
+```
+
+# And now Rent:
+```{r}
+ggplot(scatter_data, aes(x = Dominant_Party, y = RENT_PER_MONTH, fill = Dominant_Party)) +
+  geom_boxplot() +
+  stat_summary(fun = mean, geom = "point", shape = 23, size = 3, fill = "white") +
+  labs(x = "Dominant Party", y = "SPENDING_PER_MONTH", fill = "Dominant Party") +
+  scale_fill_manual(values = c("Republican" = "red", "Democrat" = "blue", "Equal" = "purple")) +
+  ggtitle("SPENDING_PER_MONTH by Dominant Party with Confidence Intervals")
+```
+

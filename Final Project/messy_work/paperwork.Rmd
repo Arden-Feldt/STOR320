@@ -33,6 +33,7 @@ head(states, 12)
 # Making States Usable:
 
 ```{r}
+
 # Give states census alphabet numbers
 states_final <- states %>%
   mutate(id = row_number()) %>%
@@ -53,7 +54,7 @@ states_final
 # MERGIN TIME
 
 ```{r}
-finalDF <- merge(housing, state2, by.x = "STATE2KX", by.y = "id", all = TRUE, na.rm=FALSE)
+finalDF <- merge(housing, states_final, by.x = "STATE2KX", by.y = "id", all = TRUE, na.rm=FALSE)
 ```
 
 # And it worked

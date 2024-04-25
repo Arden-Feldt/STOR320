@@ -1,0 +1,162 @@
+---
+title: "320 final project"
+output: html_document
+date: "2024-04-15"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+IMPORTING DATA
+
+```{r}
+library(readr)
+library(tidyverse)
+
+setwd("C:\\Users\\ethan\\OneDrive\\Desktop\\STOR320")
+
+public_housing = read_csv("C:\\Users\\ethan\\OneDrive\\Documents\\STOR320\\finalDF.csv")# %>% filter(PCT_MINORITY >= 0)
+```
+
+```{r}
+head(public_housing)
+
+current_directory <- getwd()
+```
+
+
+```{r pressure, echo=FALSE}
+small_spend = public_housing %>% filter(SPENDING_PER_MONTH <= 2000)
+
+public_housing %>% filter(SPENDING_PER_MONTH <= 2000) %>% ggplot(aes(x = Republican_Percent, y = SPENDING_PER_MONTH)) + geom_point() + geom_smooth()
+public_housing %>% filter(SPENDING_PER_MONTH <= 2000) %>% ggplot(aes(x = Moderate_Percent, y = SPENDING_PER_MONTH)) + geom_point() + geom_smooth()
+public_housing %>% filter(SPENDING_PER_MONTH <= 2000) %>% ggplot(aes(x = Democrat_Percent, y = SPENDING_PER_MONTH)) + geom_point() + geom_smooth()
+
+public_housing %>% filter(SPENDING_PER_MONTH <= 2000) %>% ggplot(aes(x = SPENDING_PER_MONTH, y = Republican_Percent)) + geom_point() + geom_smooth()
+public_housing %>% filter(SPENDING_PER_MONTH <= 2000) %>% ggplot(aes(x = SPENDING_PER_MONTH, y = Moderate_Percent)) + geom_point() + geom_smooth()
+public_housing %>% filter(SPENDING_PER_MONTH <= 2000) %>% ggplot(aes(x = SPENDING_PER_MONTH, y = Democrat_Percent)) + geom_point() + geom_smooth()
+```
+```{r pressure, echo=FALSE}
+#small_spend = small_spend %>% mutate(poverty_indicator = ifelse(TPOVERTY <= 50, 0, 1))
+
+mod = lm(SPENDING_PER_MONTH ~ Republican_Percent + Moderate_Percent + Democrat_Percent , data = public_housing)
+#summary(mod)
+
+library(dplyr)
+
+# Select only numerical variables
+numerical_public <- public_housing %>% select_if(is.numeric)
+full_mod = lm(SPENDING_PER_MONTH ~ ., data = numerical_public)
+summary(full_mod)
+#summary(full_mod1)
+```
+
+## LOOKING AT LOCATION
+
+```{r}
+ggplot(small_spend, aes(x = Republican_Percent, y = SPENDING_PER_MONTH)) +
+  geom_point() +  # Add scatterplot points
+  geom_smooth(method = lm, se = FALSE, color = "blue") +  # Add regression line
+  labs(title = "Regression of SPENDING_PER_MONTH on Republican_Percent",
+       x = "Republican_Percent", y = "SPENDING_PER_MONTH")
+
+ggplot(small_spend, aes(x = Moderate_Percent, y = SPENDING_PER_MONTH)) +
+  geom_point() +  # Add scatterplot points
+  geom_smooth(method = "lm", se = FALSE, color = "blue") +  # Add regression line
+  labs(title = "Regression of SPENDING_PER_MONTH on Moderate_Percent",
+       x = "Moderate_Percent", y = "SPENDING_PER_MONTH")
+
+ggplot(small_spend, aes(x = Democrat_Percent, y = SPENDING_PER_MONTH)) +
+  geom_point() +  # Add scatterplot points
+  geom_smooth(method = "lm", se = FALSE, color = "blue") +  # Add regression line
+  labs(title = "Regression of SPENDING_PER_MONTH on Democrat_Percent",
+       x = "Democrat_Percent", y = "SPENDING_PER_MONTH")
+```
+
+```{r}
+# This plot helps you assess whether the model's residuals (errors) have a pattern or are randomly distributed around zero. 
+# If there's a pattern, it suggests that the model may be missing some information.
+plot(full_mod, which = 1)
+
+# Normal Q-Q Plot: This plot helps you check whether the residuals are normally distributed. 
+# If the points follow a straight line, it suggests that the residuals are normally distributed.
+plot(mod, which = 2)
+
+# This plot helps you assess whether the residuals are spread equally along the range of predictors.
+# A horizontal line with equally spread points suggests homoscedasticity (constant variance) of residuals.
+plot(mod, which = 3)
+
+
+```
+
+```{r}
+library(broom)
+mod_data = tidy(full_mod, conf.int = TRUE)
+mod_data
+```
+
+```{r}
+mod_data$estimate[1]
+```
+
+```{r}
+# https://nicholasrjenkins.science/post/data_viz_r/data_visualization_r/
+fit_results <- tidy(full_mod, conf.int = TRUE) %>% 
+  mutate(model = "Model 1")
+
+model_results <- tidy(full_mod, conf.int = TRUE)
+
+
+ggplot(data = model_results, 
+       aes(x = estimate, y = term, xmin = conf.low, xmax = conf.high)) +
+  geom_pointrange() +
+  labs(title = "Model Estimates of Political Slant of Government Public Housing Spending",
+       x = "Coefficient Estimate",
+       y = "Predictor",
+       caption = "Models fit with OLS. Error bars show the 95% confidence interval.") +
+  scale_y_discrete(labels = names(small_spend))
+```
+
+
+
+```{r}
+public_housing$predicted <- predict(mod)
+
+length(mod)
+mod$coefficients
+intercept = mod$coefficients[1]
+intercept
+
+
+# Create scatterplot
+ggplot(public_housing, aes(x = SPENDING_PER_MONTH, y = predicted)) +
+  geom_point() +
+  geom_abline(intercept = 0, slope = 1, color = "red", linetype = "dashed") + # Add a dashed line for perfect prediction
+  labs(x = "Actual SPENDING_PER_MONTH", y = "Predicted SPENDING_PER_MONTH") +
+  ggtitle("Actual vs. Predicted SPENDING_PER_MONTH")
+```
+
+```{r}
+scatter_data <- public_housing %>%
+  group_by(STATE2KX) %>%
+  summarise_all(mean) %>%
+  select(STATE2KX, SPENDING_PER_MONTH, Republican_Percent, Moderate_Percent, Democrat_Percent) %>%
+  #gather(key = "Party", value = "value", Republican_Percent, Moderate_Percent, Democrat_Percent) %>%
+  filter(STATE2KX <= 51)
+
+head(scatter_data, 60)
+#nrow(scatter_data)
+
+library(ggplot2)
+
+# Create the scatterplot
+ggplot(scatter_data, aes(x = STATE2KX, y = SPENDING_PER_MONTH, size = Democrat_Percent, color = Republican_Percent)) +
+  geom_point() +
+  labs(x = "State", y = "Government Spending", color = "Dominant Party") +
+  ggtitle("Government Spending vs. State with Dominant Party Affiliation")
+
+```
+
