@@ -1,0 +1,426 @@
+---
+title: "Final Paper"
+author: "STOR 320.01 Group 14"
+date: "`r format(Sys.time(), '%B %d, %Y')`"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(modelr)     
+library(xtable)
+library(broom)
+library(knitr)
+library(dplyr)
+library(maps)
+library(mapproj)
+library(stringr)
+library(ggplot2)
+#Put Necessary Libraries Here
+```
+
+# INTRODUCTION
+
+Public housing was a grassroots initiative officially established in 1937 as part of the New Deal to provide a solution to the large proportion of the population living in slums as a result of the rapid urbanization after the Great Depression. This Housing Act created the United States Housing Authority, whose main job is to reallocate federal subsidies to local housing authorities so they can build public housing units. Then, in 1968, the Fair Housing Act of 1968 was implemented to eliminate discrimination toward those seeking federally-assisted housing. This act was a turning point in public housing developments and laid the foundation for the current  Department of Housing and Urban Development which handles all public housing developments in the United States today. While HUD was established and grew to have a significant impact on the country, there were limitations placed on the department from certain presidential administrations. The most significant was the Clinton Administration through the Faircloth Amendment which prohibits HUD from funding new developments with specific funds if it exceeds the number that the Public Housing Authority owned at the date of October 1st, 1999. 
+This imposed a constraint on HUD's activities, halting the creation of new public developments, even in cases where local demand for such projects was evident.
+
+Now, in 2024, [U.S. Department of Housing and Urban Development](https://www.hud.gov/) continues this effort, creating safe and decent rental housing for low-income families, individuals with disabilities and the elderly population. Currently, there are around 1.2 million households living in public housing units. Our group wanted to investigate the relationship and trends between different variables and the government spending/rent prices within the developments. We hypothesized that there would be specific variables that would be better at predicting government spending and rent prices, and those variables would be different between the two models. Predicting government spending based on certain variables can be useful to determine the amount of public housing units that can be built in an area. The specific variables will provide insight on the specific demographic data of the surrounding location, like minority proportions or individuals with disabilities amounts, that can predict the government spending in the area. Furthermore, it can provide knowledge on what the government constitutes to be important when deciding how to allocate money to each development zone. Predicting the rent could be especially useful to individuals looking to rent housing, as they can decide which development in their area matches their thresholds for paying certain rent prices. To maximize the affordability of rent prices, specific predictors can provide insight on the best locations (with certain features) to build housing units.
+
+# DATA
+
+Our data was derived from the  [Office of Policy Development and Research](https://hudgis-hud.opendata.arcgis.com/datasets/HUD::public-housing-developments/about) on the Public Housing Developments of HUD, and was published on 12/06/2023. The location of each unit is determined by the location of the building with the largest number of units that are managed by HUD. The dataset itself is comprised of many different variables including percent of minorities (`PCT_MINORITY`), percent of women as the head of households (`PCT_FEMALE_HEAD`), percent of households with income below $5,000 per year (`PCT_LT5K`), etc.. For a more complete list, visit this [site](https://www.arcgis.com/sharing/rest/content/items/5c96143f79c940a0a8cedae99a1ac562/info/metadata/metadata.xml?format=default&output=html). The numerical variables are the most relevant to our discussion because most are proportions that can be also serve as predictors of government spending per month (`SPENDING_PER_MONTH`) and rent prices per month (`RENT_PER_MONTH`). There were over 150 variables in the dataset, so we subsetted the variables to include most of the numerical variables and the categorical variables that could be relevant. For example, we kept `STATE2KX`, the state variable, because that could provide insight on differences between states in relation to our response variables. Furthermore, when building the models for government spending and rent prices, we removed the other variable to understand their relationships separately. For example, in the `SPENDING_PER_MONTH` models, we removed `RENT_PER_MONTH`, and vice versa.
+
+The graph below shows the government spending per month and rent prices per month around the United States (and its territories).
+```{r, echo = F}
+
+public_housing_messy <- read_csv("Public_Housing_Developments.csv", show_col_types = FALSE)
+party_politics_messy <- read_csv("states.txt", show_col_types = FALSE)
+states_messy <- map_data("state")
+```
+```{r, echo = F}
+public_housing <- public_housing_messy %>%
+  select(TOTAL_UNITS, SPENDING_PER_MONTH, RENT_PER_MONTH, STATE2KX) %>%
+  rename(STATE = STATE2KX) %>%
+  group_by(STATE) %>%
+  summarise_all(sum) %>%
+  mutate(STATE = as.numeric(STATE))
+
+```
+```{r, echo = F}
+# Give states census alphabet numbers
+party_politics <- party_politics_messy %>%
+  mutate(id = row_number()) %>%
+  # Remove useless column
+  select(-5) %>%
+  # Make names pretty
+  rename(`Republican_Percent` = `Republicanlean Rep.`, `Moderate_Percent`=`No lean`, `Democrat_Percent` = `Democratlean Dem.`) %>%
+  # Replace '%' signs
+  mutate_at(vars(Republican_Percent, Moderate_Percent, Democrat_Percent), ~ gsub("%", "", .)) %>%
+  # Make all numeric
+  mutate_at(vars(Republican_Percent, Moderate_Percent, Democrat_Percent), as.numeric) %>%
+  # Accuratly make percents
+  mutate_at(vars(Republican_Percent, Moderate_Percent, Democrat_Percent), ~ ./100) %>%
+  # To match all the other data sets
+  mutate(State = tolower(State))
+
+```
+```{r,echo = F}
+parties_and_public <- merge(public_housing, party_politics, by.x = "STATE", by.y = "id", all = TRUE, na.rm=FALSE)
+#head(parties_and_public)
+
+final_df_messy <- merge(parties_and_public, states_messy, by.x = "State", by.y = "region")
+
+```
+```{r, echo = F}
+final_df <- final_df_messy %>%
+  select(-subregion) %>%
+  rename(id = STATE)
+
+```
+```{r, echo = F}
+#Average Spending per month
+ggplot(final_df, aes(long, lat)) + 
+  geom_polygon(aes(group = group, fill = SPENDING_PER_MONTH)) + 
+  coord_map() +
+  ggtitle("Average Government Spending per Month by State") + 
+  theme(panel.background = element_blank()) +
+  labs(fill = "Spending per Month") +  # Change legend title
+  theme(panel.background = element_blank(),  # Remove panel background
+        axis.title = element_blank(),  # Remove axis titles
+        axis.text = element_blank(),  # Remove axis text
+        axis.ticks = element_blank(),
+        plot.title = element_text(hjust = 0.5))  #
+
+# Average Rent Per Month
+ggplot(final_df, aes(long, lat)) + 
+  geom_polygon(aes(group = group, fill = RENT_PER_MONTH)) + 
+  coord_map() +
+  ggtitle("Average Rent per Month for Public Housing Developments by State") +
+  theme(panel.background = element_blank()) +
+  labs(fill = "Rent per Month") +  # Change legend title
+  theme(panel.background = element_blank(),  # Remove panel background
+        axis.title = element_blank(),  # Remove axis titles
+        axis.text = element_blank(),  # Remove axis text
+        axis.ticks = element_blank(),
+        plot.title = element_text(hjust = 0.5))
+```
+
+Looking into the government spending, we decided to merge a dataset from [Pew Research Center](https://www.pewresearch.org/religious-landscape-study/database/compare/party-affiliation/by/state/) of the political leaning of each state into the original HUD dataset to determine whether there was a statistically significant relationship. Below is a table of the first ten states of the table and their political leanings. 
+
+```{r, echo = F}
+party_affiliations = read.csv("states.txt")
+party_affiliations = party_affiliations %>% rename(`Republican Leaning` = "Republicanlean.Rep.", `No Lean` = "No.lean", `Democratic Leaning` = "Democratlean.Dem.") %>% select(-c("Sample.size"))
+kable(head(party_affiliations, 10), align = "c")
+```
+
+
+# RESULTS
+
+## Question One: What Factors Predict Government Spending?
+
+To determine what variables predicted government spending, we began with building five models: full, empty, forward regression, backward selection, and stepwise regression. All the models were statistically significant. After running a 10-fold cross-validation with an MAE function and calculating the adjusted $R^2$, it is hard to strictly conclude the best-fitted model due to differing statistical metrics, specifically Mean Absolute Error, adjusted $R^2$, and the p-values. The Mean Absolute Error (MAE) is a metric used to measure the average absolute difference between the predicted values and the actual values in a dataset. In simpler terms, MAE tells you, on average, how much the predictions of a model deviate from the actual values, without considering the direction of the deviation. As you can see in the visual below, the first 5 bars do not have significantly different Mean Absolute Error values other than the Empty model, which is significantly larger. However, to fit an interaction model, which accounts for the relationship between each variable with another, we needed to reduce the number of variables. To select the best model, we opted for the one with the fewest variables. We decided this because the models with the lowest mean absolute errors showed only slight differences, varying by tenths, indicating their close similarity in statistical significance. Therefore, we chose the stepwise function because it had the least amount of variables.
+
+```{r, echo = F}
+library(tibble)
+
+box <- tribble(
+  ~x, ~y,
+  "Full", 121.1805, 
+  "Empty", 292.508,
+  "Forward", 118.8355,
+  "Backward", 118.8355,
+  "Stepwise", 119.926,
+  "Small Interaction", 135.7329
+)
+
+box2 <- as.data.frame(box)
+
+box2$x <- factor(box2$x, levels = c(box2$x[box2$x != "Small Interaction"], "Small Interaction"))
+
+colors <- c("#4CAF50", "#72BFBF", "#85CDAC", "#9DC88D", "#8F4EBF", "#4393C3")
+
+ggplot(box2, aes(x = x, y = y, fill = x)) +
+  geom_bar(stat = "identity", position = position_dodge(width = 0.8)) +  # Adjust width for spacing
+  scale_fill_manual(values = colors) +  # Apply the custom color palette
+  labs(title = "Model Comparison for Government Spending",
+       x = "Model",
+       y = "Mean Absolute Error") +
+  theme_minimal() +
+  theme(legend.position = "none")
+```
+
+```{r, echo = F, results = 'hide'}
+housing <- read.csv("Public_Housing_Developments.csv")
+states <- read.csv("states.txt", header = TRUE)
+
+states_final <- states %>%
+  mutate(id = row_number()) %>%
+  # Remove useless column
+  select(-5) %>%
+  # Make names pretty
+  rename(`Republican_Percent` = `Republicanlean.Rep.`, `Moderate_Percent`=`No.lean`, `Democrat_Percent` = `Democratlean.Dem.`) %>%
+  # Replace '%' signs
+  mutate_at(vars(Republican_Percent, Moderate_Percent, Democrat_Percent), ~ gsub("%", "", .)) %>%
+  # Make all numeric
+  mutate_at(vars(Republican_Percent, Moderate_Percent, Democrat_Percent), as.numeric) %>%
+  # Accuratly make percents
+  mutate_at(vars(Republican_Percent, Moderate_Percent, Democrat_Percent), ~ ./100)
+
+public_housing <- merge(housing, states_final, by.x = "STATE2KX", by.y = "id", all = TRUE, na.rm=FALSE)
+
+public_housing$STATE2KX = as.numeric(public_housing$STATE2KX)
+
+public_housing %>% mutate(SCATTERED_SITE_IND = ifelse(SCATTERED_SITE_IND == "N", 0, 1))
+
+numerical_public <- public_housing %>% select_if(is.numeric)
+
+data <- numerical_public %>% select(-c("X", "Y", "OBJECTID", "RENT_PER_MONTH", "BG2KX", "BLOCK2KX", "CBSA", "NECTA", "DPBC_CKSUM", "C1PPRB", "LAT", "LON"))
+
+data <- na.omit(data)
+```
+
+
+```{r, echo = F, results = 'hide'}
+best_model_data = data %>% select(c("SPENDING_PER_MONTH", "SPENDING_PER_MONTH_PREV_YR", "MONTHS_SINCE_REPORT", "TPCT_OWNSFD", "PCT_OCCUPIED", "PCT_HISPANIC", "CURCOSUB", "PCT_DISABLED_LT62", "PERSON_INCOME", "Moderate_Percent", "TMINORITY", "MONTHS_WAITING", "TPOVERTY", "PCT_LT5K", "PCT_5K_LT10K", "METRO", "PCT_ASIAN", "PCT_DISABLED_ALL", "PCT_MEDIAN", "PCT_FEMALE_HEAD_CHILD", "PCT_BED1", "REGULAR_VACANT", "PCT_10K_LT15K", "AVE_UTIL_ALLOW", "PCT_DISABLED_GE62", "PCT_AGE85PLUS", "PCT_AGE51_61", "PCT_GE20K", "NUMBER_REPORTED", "TOTAL_UNITS", "PCT_15K_LT20K"))
+
+full_interact = lm(SPENDING_PER_MONTH ~ .*., data = best_model_data)
+full_interact_sum = summary(full_interact)
+
+p_values <- full_interact_sum$coefficients[, 4]  # Assuming p-values are in the 4th column
+
+# Extract variable names
+variable_names <- rownames(full_interact_sum$coefficients)
+
+# Create a data frame with variable names and their corresponding p-values
+data_df <- data.frame(variable = variable_names, p_value = p_values)
+
+data_df = data_df %>% filter(p_value <= 0.05 & p_value > 0) %>% arrange(p_value) %>% head(5)
+```
+
+To narrow down the variables for the full interaction model, we subsetted the stepwise model to only include statistically significant variables (p-values less than 0.05). After fitting the interaction model, we found it to have the highest adjusted $R^2$ value, with it being 0.97, compared to the previous models’ 0.93. The adjusted $R^2$ tells us how well the independent variables explain the variation in the dependent variable, considering the number of predictors in the model, with higher values indicating a better fit. However, we know that the more predictors you add to the model, the higher the adjusted $R^2$ will be, which is why we decided to fit a model with the five lowest p-values for the interaction variables and see if this smaller model had the same predictive accuracy based on MAE (a more accurate measure of prediction). From the plot below, you can see the five variables and their respective p-values. However, after fitting this model, and completing a 10-fold cross-validation, we found the MAE to be higher than the first five models built, which can be seen in the bar graph above with the bar labeled "Small Interaction". This indicates that the interaction models are not significantly better at predicting government spending. *The table below provides descriptions of each variable.*
+
+```{r, echo = F, results = 'hide'}
+interact_small = lm(SPENDING_PER_MONTH~ METRO*PCT_ASIAN + PERSON_INCOME*PCT_ASIAN + SPENDING_PER_MONTH_PREV_YR*MONTHS_SINCE_REPORT +	
+SPENDING_PER_MONTH_PREV_YR*MONTHS_WAITING + 	SPENDING_PER_MONTH_PREV_YR*PCT_ASIAN, data = best_model_data)
+summary(interact_small)
+
+train.model.func.small =function(data){
+  mod=lm(SPENDING_PER_MONTH~ METRO*PCT_ASIAN + PERSON_INCOME*PCT_ASIAN + SPENDING_PER_MONTH_PREV_YR*MONTHS_SINCE_REPORT +	
+SPENDING_PER_MONTH_PREV_YR*MONTHS_WAITING + 	SPENDING_PER_MONTH_PREV_YR*PCT_ASIAN, data = best_model_data)
+  return(mod)
+}
+
+significant_vars <- tibble(variable = variable_names, p_value = p_values) %>%
+  filter(p_value <= 0.05) %>%
+  arrange(p_value) %>%
+  slice_head(n = 5) %>%
+  mutate(rank = row_number())  # Add a rank column for plotting
+
+# Create a scatterplot with scientific notation on the y-axis
+ggplot(data = significant_vars, aes(x = rank, y = p_value, label = variable)) +
+  geom_point(size = 4, aes(color = variable)) +  # Use color to distinguish variables
+  scale_x_continuous(breaks = 1:5, labels = 1:5) +  # Set explicit x-axis labels
+  scale_y_continuous(labels = function(x) sprintf("%.2e", x)) +  # Apply scientific notation manually
+  labs(
+    x = "Rank of Significance",
+    y = "P-values",
+    title = "Top 5 Significant Variables by P-value",
+    color = "Variable"  # Label for the legend
+  ) +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(hjust = 0.1),
+    legend.position = "right",  # Place the legend to the right of the plot
+    legend.title.align = 0.1,
+    legend.spacing.x = unit(-3, "cm"),
+    legend.text = element_text(margin = margin(l = 90, unit = "pt")),
+    plot.background = element_rect(fill = "white", color = NA), # Set plot background color
+    panel.background = element_rect(fill = "white", color = NA), # Set panel background color
+    plot.margin = margin(t = 10, r = 1, b = 1, l = 0.5, unit = "pt") 
+  )
+
+```
+```{r, echo = F}
+variable_descriptions <- tibble(
+  Variable = c("METRO", "PCT_ASIAN", "PERSON_INCOME", 
+               "SPENDING_PER_MONTH_PREV_YEAR", "MONTHS_SINCE_REPORT", "MONTHS_WAITING"),
+  Description = c("Metropolitan Area Indicator",
+                  "Percent Asian or Pacific Islander",
+                  "Average Household Income per Person per Year",
+                  "Previous Year Spending per Month",
+                  "Average Number of Months since Manager Reported on Household",
+                  "Average Number of Months on Waiting List among Admissions")
+)
+
+variable_descriptions <- variable_descriptions %>%
+  mutate(Variable = paste(Variable, "  "),
+         Description = paste(Description, " "))
+
+kable((variable_descriptions), align = "l")
+```
+
+
+After fitting models, we decided to investigate the relationship between states' dominant political party and their government spending because the stepwise model (the best basic model) had some of those variables (`Moderate_Percent`) in its model. To do this, we used the merged data set that contains each state's dominant political leaning, utilizing this metric to predict the government spending per month in each state. We created a model that displays the distribution of average government spending per month based on the dominant political leanings of the states, which is displayed below. Based off this model, it is evident that there is larger variation within Republican-dominated states for government spending per month, with their median being higher than Democratic-dominated and equal leaning states. Therefore, there seems to be a trend of Republican states spending more money on their public housing developments. Republican States also have, on average, fewer people. The p-value for the model that took into account state politics was less than 2.2e-16, which indicates statistical significance. 
+
+
+```{r, echo = F, warning=FALSE}
+scatter_data <- public_housing %>%
+  group_by(State) %>%
+  summarise_all(mean, na.rm = TRUE) %>%
+  select(STATE2KX, SPENDING_PER_MONTH, Republican_Percent, Moderate_Percent, Democrat_Percent, State, RENT_PER_MONTH) %>% 
+  mutate(State = tolower(State)) %>%
+  mutate(Dominant_Party = case_when(
+    Republican_Percent > Moderate_Percent & Republican_Percent > Democrat_Percent ~ "Republican",
+    Moderate_Percent > Republican_Percent & Moderate_Percent > Democrat_Percent ~ "Moderate",
+    Democrat_Percent > Republican_Percent & Democrat_Percent > Moderate_Percent ~ "Democrat",
+    TRUE ~ "Equal"  # If all percentages are equal
+  )) %>%
+  filter(STATE2KX <= 51)
+
+```
+
+```{r, echo = F, warning = FALSE}
+ggplot(scatter_data, aes(x = Dominant_Party, y = SPENDING_PER_MONTH, fill = Dominant_Party)) +
+  geom_boxplot() +
+  stat_summary(fun = mean, geom = "point", shape = 23, size = 3, fill = "white") +
+  labs(x = "Dominant Party", y = "Spending Per Month", fill = "Dominant Party") +
+  scale_fill_manual(values = c("Republican" = "red", "Democrat" = "blue", "Equal" = "purple")) +
+  ggtitle("Government Spending by Dominant Party") +
+  theme(legend.position = "none")
+```
+
+## Question Two: What Factors Predict Rent Prices?
+
+When predicting rent, we wanted to determine whether building its models or translating government spending models would prove to be better at predicting rent prices. Therefore, we constructed five models: full, empty, forward regression, backward regression, and stepwise regression, like before, and completed 10-fold cross-validation. We found that the full model had the lowest MAE. So, like above, we created a subsetted data set that only contained the variables from the stepwise regression model. Once again, the adjusted $R^2$ was higher, but we knew a smaller model could have the same predictive quality. To do this, we created another plot (pictured below) that displayed the five interactions with the lowest p-values, fitting a linear model using only those variables and `RENT_PER_MONTH` as the response variable. *The table below provides descriptions of each variable.*   
+
+```{r, echo = F}
+data1 <- numerical_public %>% select(-c("X", "Y", "OBJECTID", "SPENDING_PER_MONTH", "BG2KX", "BLOCK2KX", "CBSA", "NECTA", "DPBC_CKSUM", "C1PPRB", "LAT", "LON"))
+
+data1 <- na.omit(data1)
+
+
+best_model_data1 = data1 %>% select(c("ACC_UNITS", "REGULAR_VACANT", "PHA_TOTAL_UNITS", 
+               "PCT_REPORTED", "MONTHS_SINCE_REPORT", "PCT_MOVEIN", 
+               "PEOPLE_TOTAL", "HH_INCOME", "PERSON_INCOME", 
+               "PCT_WAGE_MAJOR", "PCT_WELFARE_MAJOR", "PCT_OTHER_MAJOR", 
+               "PCT_MEDIAN", "PCT_LT50_MEDIAN", "PCT_LT30_MEDIAN", 
+               "PCT_FEMALE_HEAD_CHILD", "PCT_AGE85PLUS", "MONTHS_WAITING", 
+               "MONTHS_FROM_MOVEIN", "PCT_UTILITY_ALLOW", "AVE_UTIL_ALLOW", 
+               "PCT_OVERHOUSED", "TMINORITY", "TPOVERTY", 
+               "TPCT_OWNSFD", "CURCOSUB", "MICRO", 
+               "DPBC", "SPENDING_PER_MONTH_PREV_YR", "CHLDRN_MBR_CNT", 
+               "ELDLY_PRCNT", "PCT_LT80_MEDIAN", "MEDIAN_INC_AMNT", 
+               "ANNL_EXPNS_AMNT","RENT_PER_MONTH"))
+
+full_interact1 = lm(RENT_PER_MONTH ~ .*., data = best_model_data1)
+full_interact1_sum = summary(full_interact1)
+
+p_values <- full_interact1_sum$coefficients[, 4]
+variable_names <- rownames(full_interact1_sum$coefficients)
+
+# Create a data frame with variable names and their corresponding p-values
+significant_vars <- tibble(variable = variable_names, p_value = p_values) %>%
+  filter(p_value <= 0.05) %>%
+  arrange(p_value) %>%
+  slice_head(n = 5) %>%
+  mutate(rank = row_number())  # Add a rank column for plotting
+
+# Create a scatterplot
+ggplot(data = significant_vars, aes(x = rank, y = p_value, label = variable)) +
+  geom_point(size = 4, aes(color = variable)) +  # Use color to distinguish variables
+  scale_x_continuous(breaks = 1:5, labels = 1:5) +  # Set explicit x-axis labels
+  labs(
+    x = "Rank of Significance",
+    y = "P-values",
+    title = "Top 5 Significant Variables by P-value",
+    color = "Variable"  # Label for the legend
+  ) +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(hjust = 0.1),
+    legend.position = "right",  # Place the legend to the right of the plot
+    legend.title.align = 0.1,
+    legend.spacing.x = unit(-3, "cm"),
+    legend.text = element_text(margin = margin(l = 100, unit = "pt")),
+    plot.margin = margin(t = 10, r = 1, b = 10, l = 1, unit = "pt")
+  )
+
+```
+
+```{r, echo = F}
+variable_info <- tibble(
+  Variable = c("PCT_LT50_MEDIAN", "PCT_LT80_MEDIAN", "PCT_MEDIAN", "PERSON_INCOME", "PHA_TOTAL", "SPENDING_PER_MONTH_PREV_YR"),
+  Description = c(
+    "Percent of Households below 50% median local area Income",
+    "Percent of Households below 80% median local area Income",
+    "Household income as a percent of local area median family income",
+    "Average household income per person per year",
+    "Number of units under contract for federal subsidy and available for occupancy",
+    "Previous Year Spending per Month"
+  )
+)
+
+variable_info <- variable_info %>%
+  mutate(Variable = paste(Variable, "     "),
+         Description = paste(Description, "    ")) 
+
+kable((variable_info), align = "l")
+
+```
+
+
+After fitting cross-validation and computing the MAE for this smaller model, the MAE from the "Small Interaction" model was significantly higher than the forward, backward, and stepwise models. To look at the relationship between government spending and rent, we fit the stepwise model that predicted government spending the best to rent prices to see if the same predictors were just as effective for rent prices. However, the MAE for this model, “Fitted Stepwise”, was not as effective, which can be seen in the bar plot below that compares all the MAE values. The Full Model has the lowest MAE, with the Fitted Stepwise and Small Interaction not proving to have a lower MAE. 
+
+```{r, echo = F}
+library(tibble)
+box <- tribble(
+  ~x, ~y,
+  "Full", 24.16535, 
+  "Empty", 102.4874,
+  "Forward", 33.9063,
+  "Backward", 30.63619,
+  "Stepwise", 34.16163,
+  "Fitted Stepwise", 34.14396,
+  "Small Interaction", 64.70925
+)
+box1 <- as.data.frame(box)
+
+# Reorder the levels of x based on y
+box1$x <- factor(box1$x, levels = c(box1$x[box1$x != "Small Interaction"], "Small Interaction"))
+
+# Define the color palette
+colors <- c("#8F4EBF", "#4393C3", "#72BFBF", "#85CDAC", "#9DC88D", "#B6D86B", "#FFCC66")
+
+box1$x <- ifelse(box1$x %in% c("Fitted Stepwise", "Small Interaction"), str_wrap(box1$x, width = 6), as.character(box1$x))
+
+# Create the bar plot
+ggplot(box1, aes(x = x, y = y, fill = x)) +
+  geom_bar(stat = "identity") +
+  scale_fill_manual(values = colors, name = "Model Types") +  # Apply the custom color palette
+  labs(title = "Model Comparison for Rent Prices",
+       x = "Model",
+       y = "Mean Absolute Error") +
+  theme_minimal()
+```
+
+After finding the full model to have the predictive ability for rent prices, we decided to compare the political leanings of each state, to see if its effect is similar or different to government spending. After examining the confidence intervals below, it appears that the Democratic and Republican party’s average rent prices are more similar than government spending, indicating that political leanings have a less significant relationship with `RENT_PER_MONTH` than `SPENDING_PER_MONTH`. 
+
+```{r, echo = F, warning = FALSE}
+ggplot(scatter_data, aes(x = Dominant_Party, y = RENT_PER_MONTH, fill = Dominant_Party)) +
+  geom_boxplot() +
+  stat_summary(fun = mean, geom = "point", shape = 23, size = 3, fill = "white") +
+  labs(x = "Dominant Party", y = "Rent per Month", fill = "Dominant Party") +
+  scale_fill_manual(values = c("Republican" = "red", "Democrat" = "blue", "Equal" = "purple")) +
+  ggtitle("Rent Prices by Dominant Party") +
+  theme(legend.position = "none")
+```
+
+
+# CONCLUSION
+The variables utilized to predict the rent prices did not correlate to the variables that best predicted the government spending. Considering government spending (`SPENDING_PER_MONTH`), the lowest p-values were seen in variables such as government spending in the year before, the percent of Asian or Pacific Islander descent in the community, and location in the country of the community as can be seen in the scatter plot. However, the most significant predictors for rent price (`RENT_PER_MONTH`) were variables such as average household income in the community or the percent of households below a certain income percentile compared to the average income in the local area. In essence, our government spending model could not be used to predict rent and our rent model would not be able to be used to predict government spending as they simply had different predictor variables and factors. Moreover, when we took our most accurate government spending model and fitted it to predict rent, the mean absolute error that was generated was larger than that of the full model we created for rent price prediction. This again shows how the differing predictors are what caused our models for government spending and rent prices to behave differently.
+
+When examining the political affiliation in a state, this metric had clear effects on government spending; the same can not be said for rent prices. Red States had more money spent on them on average, but the same trends were not found when it came to rent. You could also accurately predict a state’s expenditure knowing its politics. This highlights a tie between our political system’s parties and our federal allocation of public housing. 
+
+Moving forward, we recommend conducting further comparisons between models predicting government spending and rent prices. Additionally, exploring additional interaction variables could uncover predictors with better predictive capabilities for each response variable. Incorporating historical data from previous years could offer valuable insights into the correlations guiding government spending allocation and rent price determination. Finding variables that are stronger at predicting rent prices and government spending is beneficial to policymakers and stakeholders because they’re involved in housing policy and resource allocation. For example, the government spending in the previous year provides insight into the spending of the current year. While this may seem obvious, that relationship gives insight that changes in the demographics of the housing site are not as important as the previous spending values. Therefore, the future of public housing sites, including their funding and affordability, can be determined by these models.
+

@@ -1,6 +1,8 @@
 ---
 title: "R Notebook"
-output: html_notebook
+output:
+  html_document:
+    df_print: paged
 ---
 
 # Load in Libraries
@@ -12,9 +14,10 @@ library(ggplot2)
 
 # Load in DF
 ```{r}
-public_housing <- read.csv("C:\\Users\\ethan\\OneDrive\\Documents\\STOR320\\finalDF.csv")
+public_housing <- read.csv("C:\\Users\\ethan\\OneDrive\\Documents\\STOR320\\Final Project\\messy_work\\finalDF.csv")
 ```
 
+# Before the break <br> and after
 # Make a new DF for Scatter Plotting
 ```{r}
 scatter_data <- public_housing %>%
@@ -56,6 +59,20 @@ ggplot(scatter_data2, aes(x = STATE2KX, y = SPENDING_PER_MONTH, size = SPENDING_
   scale_color_manual(values = c("Republican" = "red", "Moderate" = "gray", "Democrat" = "blue", "Equal" = "purple")) +
   ggtitle("Government Spending vs. State with Dominant Party Affiliation")
 
+```
+
+```{r}
+scatter_data2 <- scatter_data %>%
+  filter(Dominant_Party != "Equal")
+
+ggplot(scatter_data2, aes(x = STATE2KX, y = RENT_PER_MONTH, size = RENT_PER_MONTH, color = Dominant_Party)) +
+  geom_point() +
+  geom_hline(data = scatter_data2 %>% group_by(Dominant_Party) %>% summarise(avg_rent = mean(RENT_PER_MONTH)),
+             aes(yintercept = avg_rent, color = Dominant_Party), linetype = "dashed") +
+  geom_smooth(aes(group = Dominant_Party), method = "lm", se = FALSE) +
+  labs(x = "State", y = "Government Spending", color = "Dominant Party") +
+  scale_color_manual(values = c("Republican" = "red", "Moderate" = "gray", "Democrat" = "blue", "Equal" = "purple")) +
+  ggtitle("Government Spending vs. State with Dominant Party Affiliation")
 ```
 
 
