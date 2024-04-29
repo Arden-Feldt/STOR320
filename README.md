@@ -1,6 +1,10 @@
 # STOR 320
-This is the majority of the code I submitted for assignments in STOR 320, sophmore year at UNC.
+The code I used for my part of the STOR320 final project. The .Rmd and .HTML files here are our final paper. 
 
-Inside Final Project there are a few files showing some of the work we did in a legible manner, along with the final paper itself (to be added 4/25/24).
+## Final Project Work
+Contains some cleaned up .Rmd files, that we used in the final paper. 
 
-Labs, HomeWorks, and Analysis all contain .Rmd files of work I submitted to be graded (also to be added 4/25/24).
+## Messy Work
+Ugly barely usable files that we used while trying to find a direction.
+
+Labs, HomeWorks, and Analysis .Rmd files are not added as this repo is public.
