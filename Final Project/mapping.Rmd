@@ -22,11 +22,11 @@ library(tidyverse)
 ## Upload your files
 ```{r}
 # Set to your project location
-setwd("C:\\Users\\ethan\\OneDrive\\Desktop\\STOR320")
+setwd("C:\\Users\\ethan\\OneDrive\\Documents\\STOR320\\Final Project\\messy_work")
 
 # Change to your file locations
-public_housing_messy <- read_csv("C:\\Users\\ethan\\OneDrive\\Documents\\STOR320\\Final Project\\Public_Housing_Developments.csv")
-party_politics_messy <- read_csv("C:\\Users\\ethan\\OneDrive\\Documents\\STOR320\\Final Project\\states.txt")
+public_housing_messy <- read_csv("Public_Housing_Developments.csv")
+party_politics_messy <- read_csv("states.txt")
 states_messy <- map_data("state")
 ```
 

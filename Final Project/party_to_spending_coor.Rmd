@@ -17,7 +17,6 @@ library(ggplot2)
 public_housing <- read.csv("C:\\Users\\ethan\\OneDrive\\Documents\\STOR320\\Final Project\\messy_work\\finalDF.csv")
 ```
 
-# Before the break <br> and after
 # Make a new DF for Scatter Plotting
 ```{r}
 scatter_data <- public_housing %>%
