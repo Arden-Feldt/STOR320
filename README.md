@@ -1,5 +1,5 @@
 # STOR 320
-The code I used for my part of the STOR320 final project. The .Rmd and .HTML files here are our final paper. We got above the class average with our paper, and a 93 on our presentaion. I ended the class with an A-.
+The code I used for my part of the STOR320 final project. The Final Paper.Rmd and Final-Paper.html files here are our final paper. We got above the class average with our paper, and a 93 on our presentation (STOR 320 PROJECT.pdf). I ended the class with an A-.
 
 ## Final Paper.Rmd
 This is the R notebook that generates my groups final paper. It contains several dependencies and cannot be run without shoring those up. Luckly you can see what it produces in the Final-Paper.html file.
